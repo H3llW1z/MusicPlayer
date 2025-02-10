@@ -1,4 +1,4 @@
-package com.panassevich.musicplayer.ui.theme
+package com.panassevich.musicplayer.presentation.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
