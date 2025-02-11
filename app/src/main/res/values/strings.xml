@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Music Player</string>
+    <string name="bottom_bar_title_online_tracks">Online tracks</string>
+    <string name="bottom_bar_title_local_tracks">Local tracks</string>
 </resources>

@@ -3,7 +3,6 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
-    alias(libs.plugins.serialization)
 }
 
 android {
@@ -52,15 +51,6 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
 
-    implementation(libs.mvikotlin.core)
-    implementation(libs.mvikotlin.main)
-    implementation(libs.mvikotlin.coroutines)
-
-    implementation(libs.decompose.core)
-    implementation(libs.decompose.jetpack)
-
-    implementation(libs.serialization)
-
     implementation(libs.dagger.core)
     ksp(libs.dagger.compiler)
 
@@ -68,10 +58,12 @@ dependencies {
     implementation(libs.retrifit.gsonConverter)
 
     implementation(libs.androidx.media3.exoplayer)
-    implementation(libs.androidx.media3.exoplayer.dash)
+    implementation(libs.androidx.media3.exoplayer.dash) //?
 
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
+
+    implementation(libs.androidx.navigation.compose)
 
     testImplementation(libs.junit)
 

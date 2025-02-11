@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Музыка</string>
+    <string name="bottom_bar_title_online_tracks">Онлайн</string>
+    <string name="bottom_bar_title_local_tracks">Локальные</string>
 </resources>
