@@ -1,19 +1,30 @@
 package com.panassevich.musicplayer.domain.repository
 
 import com.panassevich.musicplayer.domain.entity.PlaybackState
-import kotlinx.coroutines.flow.Flow
+import com.panassevich.musicplayer.domain.entity.Track
 
 interface PlaybackRepository {
 
-    val currentState: Flow<PlaybackState>
+    fun getCurrentState(): PlaybackState
 
-    fun play()
+    fun startPlay(trackId: Long)
+
+    fun resume()
 
     fun pause()
 
-    fun rewind(seconds: Int)
+    fun seekTo(seconds: Int)
 
     fun playPrevious()
 
     fun playNext()
+
+    suspend fun getAllLocalTracks(): List<Track>
+
+    suspend fun searchLocalTracks(query: String): List<Track>
+
+    suspend fun searchOnlineTracks(query: String): List<Track>
+
+    suspend fun getOnlineChart(): List<Track>
+
 }

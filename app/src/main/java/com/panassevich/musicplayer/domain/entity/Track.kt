@@ -1,12 +1,11 @@
 package com.panassevich.musicplayer.domain.entity
 
-import java.util.Calendar
-
 data class Track(
-    val id: Int,
+    val id: Long,
     val name: String,
     val albumName: String?,
-    val author: String,
-    val duration: Calendar,
+    val artistName: String,
+    val durationSeconds: Int,
     val coverUrl: String?,
+    val previewUrl: String
 )

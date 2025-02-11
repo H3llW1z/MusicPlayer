@@ -6,7 +6,7 @@ import javax.inject.Inject
 
 class ControlPlaybackUseCase @Inject constructor(private val repository: PlaybackRepository) {
 
-    fun play() = repository.play()
+    fun resume() = repository.resume()
 
     fun pause() = repository.pause()
 
@@ -14,6 +14,6 @@ class ControlPlaybackUseCase @Inject constructor(private val repository: Playbac
 
     fun playNext() = repository.playNext()
 
-    fun rewind(seconds: Int) = repository.rewind(seconds)
+    fun seekTo(seconds: Int) = repository.seekTo(seconds)
 
 }

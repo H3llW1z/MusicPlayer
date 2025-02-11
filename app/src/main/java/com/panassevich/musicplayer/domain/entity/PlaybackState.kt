@@ -1,17 +1,21 @@
 package com.panassevich.musicplayer.domain.entity
 
-import java.util.Calendar
 
-data class PlaybackState(
-    val track: Track,
-    val currentState: CurrentState,
-    val timeFromStart: Calendar,
-    val progressPercent: Int,
-    val hasPrevious: Boolean,
-    val hasNext: Boolean
-) {
+sealed class PlaybackState {
+    data object NoTrack : PlaybackState()
 
-    enum class CurrentState {
-        PLAYING, PAUSED
+    data class Current(
+        val track: Track,
+        val currentState: CurrentState,
+        val secondsFromStart: Int,
+        val progressPercent: Int,
+        val hasPrevious: Boolean,
+        val hasNext: Boolean
+    ) : PlaybackState() {
+
+        enum class CurrentState {
+            PLAYING, PAUSED
+        }
     }
 }
+
