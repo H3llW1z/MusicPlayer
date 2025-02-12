@@ -6,9 +6,11 @@ import dagger.Component
 
 @ApplicationScope
 @Component(
-    modules = [DataModule::class]
+    modules = [DataModule::class, ViewModelModule::class]
 )
 interface ApplicationComponent {
+
+    fun getViewModelFactory(): ViewModelFactory
 
     @Component.Factory
     interface Factory {

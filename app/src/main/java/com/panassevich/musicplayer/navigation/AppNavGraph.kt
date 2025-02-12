@@ -4,26 +4,28 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.toRoute
 
 @Composable
 fun AppNavGraph(
     navHostController: NavHostController,
     onlineTracksContent: @Composable () -> Unit,
     localTracksContent: @Composable () -> Unit,
-    playerContent: @Composable () -> Unit
+    playerContent: @Composable (Long) -> Unit
 ) {
     NavHost(
         navController = navHostController,
-        startDestination = Screen.OnlineTracks.route,
+        startDestination = Route.OnlineTracks,
     ) {
-        composable(route = Screen.OnlineTracks.route) {
+        composable<Route.OnlineTracks> {
             onlineTracksContent()
         }
-        composable(route = Screen.LocalTracks.route) {
+        composable<Route.LocalTracks> {
             localTracksContent()
         }
-        composable(route = Screen.Player.route) {
-            playerContent()
+        composable<Route.Player>{
+            val player: Route.Player = it.toRoute()
+            playerContent(player.trackIdToPlay)
         }
     }
 }

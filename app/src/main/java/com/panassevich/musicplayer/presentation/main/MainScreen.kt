@@ -16,10 +16,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavDestination.Companion.hasRoute
+import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.panassevich.musicplayer.R
 import com.panassevich.musicplayer.navigation.AppNavGraph
-import com.panassevich.musicplayer.navigation.Screen
+import com.panassevich.musicplayer.navigation.Route
 import com.panassevich.musicplayer.navigation.rememberNavigationState
 import com.panassevich.musicplayer.presentation.local.LocalTracksScreen
 import com.panassevich.musicplayer.presentation.online.OnlineTracksScreen
@@ -32,17 +34,20 @@ fun MainScreen() {
 
     Scaffold(
         bottomBar = {
-            val navBackStackEntry by navigationState.navHostController.currentBackStackEntryAsState()
-            val currentRoute = navBackStackEntry?.destination?.route
             NavigationBar {
+                val navBackStackEntry by navigationState.navHostController.currentBackStackEntryAsState()
+                val currentDestination = navBackStackEntry?.destination
                 val items = listOf(
                     NavigationItem.OnlineTracks,
                     NavigationItem.LocalTracks
                 )
+
                 items.forEach { item ->
                     NavigationBarItem(
-                        selected = currentRoute == item.screen.route,
-                        onClick = { navigationState.navigateTo(item.screen.route) },
+                        selected = currentDestination?.hierarchy?.any { it.hasRoute(item.route::class) } == true,
+                        onClick = {
+                            navigationState.navigate(item.route)
+                        },
                         icon = {
                             Icon(
                                 modifier = Modifier.size(30.dp),
@@ -58,8 +63,9 @@ fun MainScreen() {
         },
         floatingActionButton = {
             val navBackStackEntry by navigationState.navHostController.currentBackStackEntryAsState()
-            val currentRoute = navBackStackEntry?.destination?.route
-            val fabVisible = currentRoute != Screen.Player.route
+            val currentDestination = navBackStackEntry?.destination
+            val fabVisible =
+                currentDestination?.hierarchy?.none { it.hasRoute(Route.Player::class) } == true
             AnimatedVisibility(
                 visible = fabVisible,
                 enter = scaleIn(),
@@ -79,13 +85,18 @@ fun MainScreen() {
         AppNavGraph(
             navHostController = navigationState.navHostController,
             onlineTracksContent = {
-                OnlineTracksScreen(paddingValues)
+                OnlineTracksScreen(
+                    paddingValues = paddingValues,
+                    onTrackClick = { trackIdToPlay ->
+                        navigationState.navigateToPlayer(trackIdToPlay)
+                    }
+                )
             },
             localTracksContent = {
                 LocalTracksScreen(paddingValues)
             },
-            playerContent = {
-                PlayerScreen(paddingValues)
+            playerContent = { trackIdToPlay ->
+                PlayerScreen(paddingValues, trackIdToPlay)
             }
         )
 

@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.serialization)
 }
 
 android {
@@ -58,12 +59,13 @@ dependencies {
     implementation(libs.retrifit.gsonConverter)
 
     implementation(libs.androidx.media3.exoplayer)
-    implementation(libs.androidx.media3.exoplayer.dash) //?
 
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
 
     implementation(libs.androidx.navigation.compose)
+
+    implementation(libs.serialization)
 
     testImplementation(libs.junit)
 
