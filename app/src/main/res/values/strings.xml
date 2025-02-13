@@ -2,4 +2,7 @@
     <string name="app_name">Music Player</string>
     <string name="bottom_bar_title_online_tracks">Online tracks</string>
     <string name="bottom_bar_title_local_tracks">Local tracks</string>
+    <string name="placeholder_search">Search</string>
+    <string name="text_chart">Chart</string>
+    <string name="text_search_results">Search results</string>
 </resources>

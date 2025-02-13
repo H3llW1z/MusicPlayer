@@ -21,19 +21,23 @@ class OnlineTracksViewModel @Inject constructor(
         loadChart()
     }
 
-    fun loadChart() {
+    private fun loadChart() {
         viewModelScope.launch {
             _state.value = OnlineTracksScreenState.Loading
             val result = getChartTracksUseCase()
-            _state.value = OnlineTracksScreenState.Content(result)
+            _state.value = OnlineTracksScreenState.Content(result, TracksType.CHART)
         }
     }
 
     fun search(query: String) {
         viewModelScope.launch {
-            _state.value = OnlineTracksScreenState.Loading
-            val result = searchOnlineTracksUseCase(query)
-            _state.value = OnlineTracksScreenState.Content(result)
+            if (query.isEmpty()) {
+                loadChart()
+            } else {
+                _state.value = OnlineTracksScreenState.Loading
+                val result = searchOnlineTracksUseCase(query)
+                _state.value = OnlineTracksScreenState.Content(result, TracksType.SEARCH)
+            }
         }
     }
 

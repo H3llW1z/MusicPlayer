@@ -3,4 +3,7 @@
     <string name="app_name">Музыка</string>
     <string name="bottom_bar_title_online_tracks">Онлайн</string>
     <string name="bottom_bar_title_local_tracks">Локальные</string>
+    <string name="placeholder_search">Поиск</string>
+    <string name="text_chart">Чарт</string>
+    <string name="text_search_results">Результаты поиска</string>
 </resources>

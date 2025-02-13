@@ -1,8 +1,5 @@
 package com.panassevich.musicplayer.presentation.main
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -34,30 +31,35 @@ fun MainScreen() {
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
-                val navBackStackEntry by navigationState.navHostController.currentBackStackEntryAsState()
-                val currentDestination = navBackStackEntry?.destination
-                val items = listOf(
-                    NavigationItem.OnlineTracks,
-                    NavigationItem.LocalTracks
-                )
+            val navBackStackEntry by navigationState.navHostController.currentBackStackEntryAsState()
+            val currentDestination = navBackStackEntry?.destination
 
-                items.forEach { item ->
-                    NavigationBarItem(
-                        selected = currentDestination?.hierarchy?.any { it.hasRoute(item.route::class) } == true,
-                        onClick = {
-                            navigationState.navigate(item.route)
-                        },
-                        icon = {
-                            Icon(
-                                modifier = Modifier.size(30.dp),
-                                painter = painterResource(item.iconResId), contentDescription = null
-                            )
-                        },
-                        label = {
-                            Text(text = stringResource(id = item.titleResId))
-                        }
+            val isPlayer = currentDestination?.hasRoute(Route.Player::class) == true
+            if (!isPlayer) {
+                NavigationBar {
+                    val items = listOf(
+                        NavigationItem.OnlineTracks,
+                        NavigationItem.LocalTracks
                     )
+
+                    items.forEach { item ->
+                        NavigationBarItem(
+                            selected = currentDestination?.hierarchy?.any { it.hasRoute(item.route::class) } == true,
+                            onClick = {
+                                navigationState.navigate(item.route)
+                            },
+                            icon = {
+                                Icon(
+                                    modifier = Modifier.size(30.dp),
+                                    painter = painterResource(item.iconResId),
+                                    contentDescription = null
+                                )
+                            },
+                            label = {
+                                Text(text = stringResource(id = item.titleResId))
+                            }
+                        )
+                    }
                 }
             }
         },
@@ -66,11 +68,8 @@ fun MainScreen() {
             val currentDestination = navBackStackEntry?.destination
             val fabVisible =
                 currentDestination?.hierarchy?.none { it.hasRoute(Route.Player::class) } == true
-            AnimatedVisibility(
-                visible = fabVisible,
-                enter = scaleIn(),
-                exit = scaleOut()
-            ) {
+
+            if (fabVisible) {
                 FloatingActionButton(
                     onClick = {
                         navigationState.navigateToPlayer()
@@ -79,7 +78,6 @@ fun MainScreen() {
                     Icon(painter = painterResource(R.drawable.ic_player), contentDescription = null)
                 }
             }
-
         }
     ) { paddingValues ->
         AppNavGraph(
