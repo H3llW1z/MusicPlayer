@@ -1,5 +1,6 @@
 package com.panassevich.musicplayer.presentation.online
 
+import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,10 +13,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
@@ -25,6 +26,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
@@ -32,15 +34,16 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.panassevich.musicplayer.R
+import com.panassevich.musicplayer.domain.entity.OnlineTracksType
 import com.panassevich.musicplayer.domain.entity.Track
 import com.panassevich.musicplayer.getApplicationComponent
 
@@ -50,7 +53,7 @@ fun OnlineTracksScreen(paddingValues: PaddingValues, onTrackClick: (Track) -> Un
     val component = getApplicationComponent()
     val viewModel: OnlineTracksViewModel = viewModel(factory = component.getViewModelFactory())
 
-    val screenState = viewModel.state.collectAsState()
+    val screenState = viewModel.state.collectAsState(OnlineTracksScreenState.Initial)
     val searchState = rememberSaveable { mutableStateOf("") }
 
     Column(
@@ -60,9 +63,7 @@ fun OnlineTracksScreen(paddingValues: PaddingValues, onTrackClick: (Track) -> Un
             state = searchState,
             onValueChange = { text ->
                 searchState.value = text
-            },
-            onSearchClicked = { query ->
-                viewModel.search(query)
+                viewModel.search(text)
             }
         )
         when (val state = screenState.value) {
@@ -75,11 +76,24 @@ fun OnlineTracksScreen(paddingValues: PaddingValues, onTrackClick: (Track) -> Un
                     CircularProgressIndicator()
                 }
             }
+            is OnlineTracksScreenState.NoTracksFound -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        fontSize = 24.sp,
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.Bold,
+                        text = stringResource(R.string.text_nothing_found)
+                    )
+                }
+            }
 
             is OnlineTracksScreenState.Content -> {
                 val descriptionTextResId = when (state.type) {
-                    TracksType.CHART -> R.string.text_chart
-                    TracksType.SEARCH -> R.string.text_search_results
+                    OnlineTracksType.CHART -> R.string.text_chart
+                    OnlineTracksType.SEARCH -> R.string.text_search_results
                 }
                 Text(
                     modifier = Modifier.padding(start = 12.dp, bottom = 4.dp),
@@ -88,8 +102,10 @@ fun OnlineTracksScreen(paddingValues: PaddingValues, onTrackClick: (Track) -> Un
                     text = stringResource(descriptionTextResId)
                 )
                 TrackList(
+                    viewModel,
                     state.tracks,
                     onTrackClick,
+                    state.nextDataIsLoading
                 )
             }
         }
@@ -100,8 +116,10 @@ fun OnlineTracksScreen(paddingValues: PaddingValues, onTrackClick: (Track) -> Un
 
 @Composable
 private fun TrackList(
+    viewModel: OnlineTracksViewModel,
     tracks: List<Track>,
-    onTrackClick: (Track) -> Unit
+    onTrackClick: (Track) -> Unit,
+    nextDataIsLoading: Boolean
 ) {
     LazyColumn(
         contentPadding = PaddingValues(
@@ -120,6 +138,23 @@ private fun TrackList(
                 track = track
             )
         }
+        item {
+            if (nextDataIsLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .wrapContentHeight()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else {
+                SideEffect {
+                    viewModel.loadNextTracks()
+                }
+            }
+        }
     }
 }
 
@@ -127,21 +162,13 @@ private fun TrackList(
 fun SearchField(
     modifier: Modifier = Modifier,
     state: State<String>,
-    onValueChange: ((String) -> Unit),
-    onSearchClicked: (String) -> Unit
+    onValueChange: ((String) -> Unit)
 ) {
-    val focusManager = LocalFocusManager.current
     TextField(
         modifier = modifier
             .fillMaxWidth()
             .padding(8.dp),
         value = state.value,
-        keyboardActions = KeyboardActions(
-            onDone = {
-                onSearchClicked(state.value)
-                focusManager.clearFocus()
-            }
-        ),
         onValueChange = { onValueChange(it) },
         singleLine = true,
         shape = RoundedCornerShape(5.dp),
@@ -152,7 +179,6 @@ fun SearchField(
             if (state.value.isNotEmpty()) {
                 IconButton(onClick = {
                     onValueChange("")
-                    onSearchClicked("")
                 }) {
                     Icon(imageVector = Icons.Default.Clear, contentDescription = null)
                 }
@@ -176,7 +202,7 @@ private fun TrackCard(modifier: Modifier = Modifier, track: Track) {
             modifier = Modifier
                 .size(50.dp)
                 .clip(RoundedCornerShape(5.dp)),
-            model = track.coverUrl,
+            model = track.coverUrlRegular,
             contentDescription = null
         )
         Spacer(modifier = Modifier.width(12.dp))

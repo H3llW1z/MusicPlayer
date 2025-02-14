@@ -1,13 +1,26 @@
 package com.panassevich.musicplayer.data.repository
 
+import android.util.Log
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
-import com.panassevich.musicplayer.domain.entity.PlaybackState
-import com.panassevich.musicplayer.domain.entity.Track
+import com.panassevich.musicplayer.data.network.api.ApiService
 import com.panassevich.musicplayer.domain.datastore.LocalTracksDataStore
 import com.panassevich.musicplayer.domain.datastore.OnlineTracksDataStore
+import com.panassevich.musicplayer.domain.entity.OnlineTracksResult
+import com.panassevich.musicplayer.domain.entity.OnlineTracksType
+import com.panassevich.musicplayer.domain.entity.PlaybackState
+import com.panassevich.musicplayer.domain.entity.Track
 import com.panassevich.musicplayer.domain.repository.PlaybackRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.stateIn
+import java.util.LinkedList
 import javax.inject.Inject
 
 class PlaybackRepositoryImpl @Inject constructor(
@@ -16,7 +29,93 @@ class PlaybackRepositoryImpl @Inject constructor(
     private val onlineTracksDataStore: OnlineTracksDataStore
 ) : PlaybackRepository {
 
-    private var onlineTracks = listOf<Track>()
+    private val coroutineScope = CoroutineScope(Dispatchers.Default)
+    private val nextDataNeededRequests =
+        MutableSharedFlow<LoadRequest>(replay = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
+    private val _onlineTracks: MutableList<Track> = LinkedList() //TODO("Why LinkedList")
+    private val onlineTracks: List<Track>
+        get() = _onlineTracks.toList()
+
+    private var currentLoadState: CurrentLoadState = CurrentLoadState(OnlineTracksType.CHART, 0)
+
+    private val onlineTracksFlow: StateFlow<OnlineTracksResult> = flow {
+
+        nextDataNeededRequests.emit(
+            LoadRequest(
+                currentLoadState.tracksType,
+                currentLoadState.query
+            )
+        )
+
+        nextDataNeededRequests.collect { request ->
+            if (currentLoadState.tracksType != request.tracksType || currentLoadState.query != request.query) {
+                currentLoadState =
+                    CurrentLoadState(tracksType = request.tracksType, nextFrom = 0, request.query)
+                _onlineTracks.clear()
+            }
+
+            if (currentLoadState.endReached) {
+                emit(getOnlineTracksResult(hasMoreTracks = false))
+                return@collect
+            }
+
+            val nextFrom = currentLoadState.nextFrom
+            val response = when (currentLoadState.tracksType) {
+                OnlineTracksType.CHART -> {
+                    val result = onlineTracksDataStore.getOnlineChart(nextFrom)
+                    Log.d("TEST", "chart loaded")
+                    result
+                }
+
+                OnlineTracksType.SEARCH -> {
+                    val query = currentLoadState.query
+                        ?: throw IllegalStateException("For search mode query must be not null!")
+                    val rawResponse = onlineTracksDataStore.searchOnlineTracks(query, nextFrom)
+                    Log.d("TEST", "search loaded")
+                    val lastExisted = _onlineTracks.lastOrNull()
+                    if (lastExisted != null) {
+                        val overlapIndex = rawResponse.indexOfFirst { it.id == lastExisted.id }
+                        if (overlapIndex == -1) {
+                            rawResponse // no overlapping
+                        } else {
+                            rawResponse.drop(overlapIndex + 1) //drop overlapping tracks
+                        }
+                    } else {
+                        rawResponse
+                    }
+                }
+            }
+            if (response.isEmpty()) {
+                currentLoadState = currentLoadState.copy(endReached = true)
+                emit(getOnlineTracksResult(hasMoreTracks = false))
+                return@collect
+            }
+            val currentNextFrom = currentLoadState.nextFrom
+            currentLoadState =
+                currentLoadState.copy(nextFrom = currentNextFrom + ApiService.DEFAULT_PAGE_LIMIT)
+            _onlineTracks.addAll(response)
+            emit(getOnlineTracksResult())
+        }
+    }.stateIn(
+        scope = coroutineScope,
+        started = SharingStarted.Lazily,
+        initialValue = OnlineTracksResult(currentLoadState.tracksType, onlineTracks, true)
+    )
+
+    private fun getOnlineTracksResult(hasMoreTracks: Boolean = true) =
+        OnlineTracksResult(currentLoadState.tracksType, onlineTracks, hasMoreTracks)
+
+    override fun getOnlineTracks(): StateFlow<OnlineTracksResult> = onlineTracksFlow
+
+    override suspend fun loadNextData() {
+        nextDataNeededRequests.emit(
+            LoadRequest(
+                currentLoadState.tracksType,
+                currentLoadState.query
+            )
+        )
+    }
 
     override fun getCurrentState(): PlaybackState {
         val track: Track? = getCurrentTrack()
@@ -77,16 +176,17 @@ class PlaybackRepositoryImpl @Inject constructor(
         TODO("Not yet implemented")
     }
 
-    override suspend fun searchOnlineTracks(query: String): List<Track> {
-        val tracks = onlineTracksDataStore.searchOnlineTracks(query)
-        onlineTracks = tracks
-        return tracks
+    override suspend fun searchOnlineTracks(query: String) {
+        Log.d("PlaybackRepositoryImpl", "searchOnlineTracks")
+        if (query.isBlank()) {
+            return
+        }
+        nextDataNeededRequests.emit(LoadRequest(OnlineTracksType.SEARCH, query))
     }
 
-    override suspend fun getOnlineChart(): List<Track> {
-        val tracks = onlineTracksDataStore.getOnlineChart()
-        onlineTracks = tracks
-        return tracks
+    override suspend fun loadOnlineChart() {
+        Log.d("PlaybackRepositoryImpl", "loadOnlineChart")
+        nextDataNeededRequests.emit(LoadRequest(OnlineTracksType.CHART))
     }
 
     private fun getCurrentTrack(): Track? =
@@ -100,4 +200,13 @@ class PlaybackRepositoryImpl @Inject constructor(
     private fun calculateProgressPercent(currentPosition: Long, duration: Long): Int {
         return if (duration > 0) ((currentPosition.toDouble() / duration) * 100).toInt() else 0
     }
+
+    private data class LoadRequest(val tracksType: OnlineTracksType, val query: String? = null)
+
+    private data class CurrentLoadState(
+        val tracksType: OnlineTracksType,
+        val nextFrom: Int = 0,
+        val query: String? = null,
+        val endReached: Boolean = false
+    )
 }

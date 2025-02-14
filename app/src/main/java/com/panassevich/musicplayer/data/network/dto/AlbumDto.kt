@@ -7,6 +7,8 @@ data class AlbumDto(
     val id: Long,
     @SerializedName("title")
     val title: String,
+    @SerializedName("cover_medium")
+    val coverUrlRegular: String,
     @SerializedName("cover_xl")
-    val coverUrl: String
+    val coverUrlHD: String,
 )

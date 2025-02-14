@@ -9,7 +9,8 @@ fun TrackDto.toEntity() = Track(
     albumName = album.title,
     artistName = artist.name,
     durationSeconds = duration,
-    coverUrl = album.coverUrl,
+    coverUrlRegular = album.coverUrlRegular,
+    coverUrlHD = album.coverUrlHD,
     previewUrl = previewUrl
 )
 

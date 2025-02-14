@@ -1,7 +1,9 @@
 package com.panassevich.musicplayer.domain.repository
 
+import com.panassevich.musicplayer.domain.entity.OnlineTracksResult
 import com.panassevich.musicplayer.domain.entity.PlaybackState
 import com.panassevich.musicplayer.domain.entity.Track
+import kotlinx.coroutines.flow.StateFlow
 
 interface PlaybackRepository {
 
@@ -23,8 +25,12 @@ interface PlaybackRepository {
 
     suspend fun searchLocalTracks(query: String): List<Track>
 
-    suspend fun searchOnlineTracks(query: String): List<Track>
+    fun getOnlineTracks(): StateFlow<OnlineTracksResult>
 
-    suspend fun getOnlineChart(): List<Track>
+    suspend fun loadNextData()
+
+    suspend fun searchOnlineTracks(query: String)
+
+    suspend fun loadOnlineChart()
 
 }
