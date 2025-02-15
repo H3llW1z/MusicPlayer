@@ -1,6 +1,6 @@
 package com.panassevich.musicplayer.presentation.online
 
-import android.util.Log
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
@@ -23,9 +24,11 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
@@ -34,6 +37,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -48,7 +53,11 @@ import com.panassevich.musicplayer.domain.entity.Track
 import com.panassevich.musicplayer.getApplicationComponent
 
 @Composable
-fun OnlineTracksScreen(paddingValues: PaddingValues, onTrackClick: (Track) -> Unit) {
+fun OnlineTracksScreen(
+    paddingValues: PaddingValues,
+    onTrackClick: (Track) -> Unit,
+    snackbarHostState: SnackbarHostState
+) {
 
     val component = getApplicationComponent()
     val viewModel: OnlineTracksViewModel = viewModel(factory = component.getViewModelFactory())
@@ -66,52 +75,60 @@ fun OnlineTracksScreen(paddingValues: PaddingValues, onTrackClick: (Track) -> Un
                 viewModel.search(text)
             }
         )
-        when (val state = screenState.value) {
-            is OnlineTracksScreenState.Initial -> {}
-            is OnlineTracksScreenState.Loading -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
-            }
-            is OnlineTracksScreenState.NoTracksFound -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        fontSize = 24.sp,
-                        textAlign = TextAlign.Center,
-                        fontWeight = FontWeight.Bold,
-                        text = stringResource(R.string.text_nothing_found)
-                    )
-                }
-            }
+        OnlineTracksContent(viewModel, screenState, snackbarHostState, onTrackClick)
+    }
+}
 
-            is OnlineTracksScreenState.Content -> {
-                val descriptionTextResId = when (state.type) {
-                    OnlineTracksType.CHART -> R.string.text_chart
-                    OnlineTracksType.SEARCH -> R.string.text_search_results
-                }
+@Composable
+private fun OnlineTracksContent(
+    viewModel: OnlineTracksViewModel,
+    screenState: State<OnlineTracksScreenState>,
+    snackbarHostState: SnackbarHostState,
+    onTrackClick: (Track) -> Unit
+) {
+
+    when (val state = screenState.value) {
+        is OnlineTracksScreenState.Initial -> {
+        }
+        is OnlineTracksScreenState.NoTracksFound -> {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
                 Text(
-                    modifier = Modifier.padding(start = 12.dp, bottom = 4.dp),
                     fontSize = 24.sp,
+                    textAlign = TextAlign.Center,
                     fontWeight = FontWeight.Bold,
-                    text = stringResource(descriptionTextResId)
-                )
-                TrackList(
-                    viewModel,
-                    state.tracks,
-                    onTrackClick,
-                    state.nextDataIsLoading
+                    text = stringResource(R.string.text_nothing_found)
                 )
             }
         }
+
+        is OnlineTracksScreenState.Content -> {
+            val context = LocalContext.current
+            LaunchedEffect(state.hasError) {
+                if (state.hasError) {
+                    snackbarHostState.showSnackbar(context.getString(R.string.snackbar_text_network_error))
+                }
+            }
+            val descriptionTextResId = when (state.type) {
+                OnlineTracksType.CHART -> R.string.text_chart
+                OnlineTracksType.SEARCH -> R.string.text_search_results
+            }
+            Text(
+                modifier = Modifier.padding(start = 12.dp, bottom = 4.dp),
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                text = stringResource(descriptionTextResId)
+            )
+            TrackList(
+                viewModel,
+                state.tracks,
+                onTrackClick,
+                state.nextDataIsLoading
+            )
+        }
     }
-
-
 }
 
 @Composable
@@ -119,8 +136,10 @@ private fun TrackList(
     viewModel: OnlineTracksViewModel,
     tracks: List<Track>,
     onTrackClick: (Track) -> Unit,
-    nextDataIsLoading: Boolean
+    nextDataIsLoading: Boolean,
+
 ) {
+    val scrollState = rememberLazyListState()
     LazyColumn(
         contentPadding = PaddingValues(
             top = 16.dp,
@@ -203,6 +222,8 @@ private fun TrackCard(modifier: Modifier = Modifier, track: Track) {
                 .size(50.dp)
                 .clip(RoundedCornerShape(5.dp)),
             model = track.coverUrlRegular,
+            placeholder = painterResource(R.drawable.cover_placeholder),
+            error = painterResource(R.drawable.cover_placeholder),
             contentDescription = null
         )
         Spacer(modifier = Modifier.width(12.dp))

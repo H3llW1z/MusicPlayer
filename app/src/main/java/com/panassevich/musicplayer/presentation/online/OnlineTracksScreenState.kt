@@ -5,12 +5,12 @@ import com.panassevich.musicplayer.domain.entity.Track
 
 sealed class OnlineTracksScreenState {
     data object Initial : OnlineTracksScreenState()
-    data object Loading : OnlineTracksScreenState()
     data object NoTracksFound : OnlineTracksScreenState()
     data class Content(
         val tracks: List<Track>,
         val type: OnlineTracksType,
-        val nextDataIsLoading: Boolean = false
+        val nextDataIsLoading: Boolean = false,
+        val hasError: Boolean = false
     ) : OnlineTracksScreenState()
 }
 

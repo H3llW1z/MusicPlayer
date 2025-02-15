@@ -6,6 +6,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -29,7 +31,12 @@ fun MainScreen() {
 
     val navigationState = rememberNavigationState()
 
+    val snackbarHostState = SnackbarHostState()
+
     Scaffold(
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState)
+        },
         bottomBar = {
             val navBackStackEntry by navigationState.navHostController.currentBackStackEntryAsState()
             val currentDestination = navBackStackEntry?.destination
@@ -87,7 +94,8 @@ fun MainScreen() {
                     paddingValues = paddingValues,
                     onTrackClick = { trackIdToPlay ->
                         navigationState.navigateToPlayer(trackIdToPlay)
-                    }
+                    },
+                    snackbarHostState = snackbarHostState
                 )
             },
             localTracksContent = {

@@ -15,10 +15,13 @@ import com.panassevich.musicplayer.domain.repository.PlaybackRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.retry
 import kotlinx.coroutines.flow.stateIn
 import java.util.LinkedList
 import javax.inject.Inject
@@ -97,14 +100,20 @@ class PlaybackRepositoryImpl @Inject constructor(
             _onlineTracks.addAll(response)
             emit(getOnlineTracksResult())
         }
+    }.catch { exception ->
+        emit(getOnlineTracksResult(hasError = true))
+        throw exception
+    }.retry {
+        delay(RETRY_TIMEOUT_MILLIS)
+        true
     }.stateIn(
         scope = coroutineScope,
         started = SharingStarted.Lazily,
-        initialValue = OnlineTracksResult(currentLoadState.tracksType, onlineTracks, true)
+        initialValue = getOnlineTracksResult()
     )
 
-    private fun getOnlineTracksResult(hasMoreTracks: Boolean = true) =
-        OnlineTracksResult(currentLoadState.tracksType, onlineTracks, hasMoreTracks)
+    private fun getOnlineTracksResult(hasMoreTracks: Boolean = true, hasError: Boolean = false) =
+        OnlineTracksResult(currentLoadState.tracksType, onlineTracks, hasMoreTracks, hasError)
 
     override fun getOnlineTracks(): StateFlow<OnlineTracksResult> = onlineTracksFlow
 
@@ -209,4 +218,8 @@ class PlaybackRepositoryImpl @Inject constructor(
         val query: String? = null,
         val endReached: Boolean = false
     )
+
+    private companion object {
+        private const val RETRY_TIMEOUT_MILLIS = 2000L
+    }
 }
