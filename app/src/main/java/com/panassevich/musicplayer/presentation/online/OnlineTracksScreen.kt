@@ -139,7 +139,6 @@ private fun TrackList(
     nextDataIsLoading: Boolean,
 
 ) {
-    val scrollState = rememberLazyListState()
     LazyColumn(
         contentPadding = PaddingValues(
             top = 16.dp,

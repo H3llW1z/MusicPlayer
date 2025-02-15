@@ -17,8 +17,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.retry
@@ -126,23 +128,34 @@ class PlaybackRepositoryImpl @Inject constructor(
         )
     }
 
-    override fun getCurrentState(): PlaybackState {
-        val track: Track? = getCurrentTrack()
-        val state = if (track == null) {
-            PlaybackState.NoTrack
-        } else {
-            val state = PlaybackState.Current(
-                track = track,
-                if (player.isPlaying) PlaybackState.Current.CurrentState.PLAYING else PlaybackState.Current.CurrentState.PAUSED,
-                secondsFromStart = (player.currentPosition / 1000).toInt(),
-                progressPercent = calculateProgressPercent(player.currentPosition, player.duration),
-                hasPrevious = player.hasPreviousMediaItem(),
-                hasNext = player.hasNextMediaItem()
-            )
-            state
+    private val playbackStateFlow: StateFlow<PlaybackState> = flow {
+
+        while (true) {
+
+            val track: Track? = getCurrentTrack()
+
+            val state = if (track == null) {
+                PlaybackState.NoTrack
+            } else {
+                PlaybackState.Current(
+                    track = track,
+                    if (player.isPlaying) PlaybackState.Current.CurrentState.PLAYING else PlaybackState.Current.CurrentState.PAUSED,
+                    secondsFromStart = (player.currentPosition / 1000).toInt(),
+                    progressPercent = calculateProgressPercent(player.currentPosition, player.duration),
+                    hasPrevious = player.hasPreviousMediaItem(),
+                    hasNext = player.hasNextMediaItem()
+                )
+            }
+            emit(state)
+            delay(1000L)
         }
-        return state
-    }
+    }.stateIn(
+        scope = CoroutineScope(Dispatchers.Main),
+        started = SharingStarted.Lazily,
+        initialValue = PlaybackState.NoTrack
+    )
+
+    override fun getCurrentState(): StateFlow<PlaybackState> =  playbackStateFlow
 
     override fun resume() {
         player.play()
@@ -165,8 +178,12 @@ class PlaybackRepositoryImpl @Inject constructor(
         player.pause()
     }
 
-    override fun seekTo(seconds: Int) {
-        player.seekTo(seconds * 1000L)
+    override fun seekTo(fraction: Float) {
+        val track = getCurrentTrack()
+        if (track != null) {
+            player.duration
+            player.seekTo((track.durationSeconds * 1000L * fraction).toLong())
+        }
     }
 
     override fun playPrevious() {
@@ -221,5 +238,6 @@ class PlaybackRepositoryImpl @Inject constructor(
 
     private companion object {
         private const val RETRY_TIMEOUT_MILLIS = 2000L
+        private const val DELA = 2000L
     }
 }

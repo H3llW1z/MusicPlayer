@@ -102,7 +102,9 @@ fun MainScreen() {
                 LocalTracksScreen(paddingValues)
             },
             playerContent = { trackIdToPlay ->
-                PlayerScreen(paddingValues, trackIdToPlay)
+                PlayerScreen(paddingValues, trackIdToPlay, onClickBack = {
+                    navigationState.pop()
+                })
             }
         )
 

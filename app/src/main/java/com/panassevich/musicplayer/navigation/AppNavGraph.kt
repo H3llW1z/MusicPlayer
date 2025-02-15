@@ -1,6 +1,9 @@
 package com.panassevich.musicplayer.navigation
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideIn
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.unit.IntOffset
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -23,7 +26,14 @@ fun AppNavGraph(
         composable<Route.LocalTracks> {
             localTracksContent()
         }
-        composable<Route.Player>{
+        composable<Route.Player>(
+            enterTransition = {
+                slideIn(
+                    animationSpec = tween(300),
+                    initialOffset = { size -> IntOffset(0, size.height) }
+                )
+            },
+        ){
             val player: Route.Player = it.toRoute()
             playerContent(player.trackIdToPlay)
         }

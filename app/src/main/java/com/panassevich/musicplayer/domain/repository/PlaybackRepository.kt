@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.StateFlow
 
 interface PlaybackRepository {
 
-    fun getCurrentState(): PlaybackState
+    fun getCurrentState(): StateFlow<PlaybackState>
 
     fun startPlay(trackId: Long)
 
@@ -15,7 +15,7 @@ interface PlaybackRepository {
 
     fun pause()
 
-    fun seekTo(seconds: Int)
+    fun seekTo(fraction: Float)
 
     fun playPrevious()
 

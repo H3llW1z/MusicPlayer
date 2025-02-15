@@ -14,6 +14,6 @@ class ControlPlaybackUseCase @Inject constructor(private val repository: Playbac
 
     fun playNext() = repository.playNext()
 
-    fun seekTo(seconds: Int) = repository.seekTo(seconds)
+    fun seekTo(fraction: Float) = repository.seekTo(fraction)
 
 }

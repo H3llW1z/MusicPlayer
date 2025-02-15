@@ -20,6 +20,10 @@ class NavigationState(
         }
     }
 
+    fun pop() {
+        navHostController.popBackStack()
+    }
+
     fun navigateToPlayer(track: Track) {
         navHostController.navigate(Route.Player(trackIdToPlay = track.id))
     }

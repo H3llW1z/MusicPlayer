@@ -8,4 +8,6 @@
     <string name="text_search_results">Результаты поиска</string>
     <string name="text_nothing_found">По запросу ничего не найдено…</string>
     <string name="snackbar_text_network_error">Проверьте подключение к интернету или попробуйте позже</string>
+    <string name="text_no_playback">Сейчас ничего не играет…</string>
+    <string name="template_album_name">Альбом: %1$s</string>
 </resources>
