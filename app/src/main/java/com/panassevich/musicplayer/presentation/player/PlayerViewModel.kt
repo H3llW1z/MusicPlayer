@@ -1,9 +1,13 @@
 package com.panassevich.musicplayer.presentation.player
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.panassevich.musicplayer.domain.usecase.ControlPlaybackUseCase
 import com.panassevich.musicplayer.domain.usecase.GetPlaybackStateUseCase
 import com.panassevich.musicplayer.domain.usecase.StartPlayTrackUseCase
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 class PlayerViewModel @Inject constructor(
@@ -12,8 +16,40 @@ class PlayerViewModel @Inject constructor(
     private val startPlayTrackUseCase: StartPlayTrackUseCase
 ) : ViewModel() {
 
+    val playbackState = getPlaybackStateUseCase.getCurrentState()
 
-    val state = getPlaybackStateUseCase()
+    val positionInTrackFlow = getPlaybackStateUseCase.getCurrentPositionInTrack()
+    private val _sliderPosition = MutableStateFlow(0L)
+    val sliderPosition = _sliderPosition.asStateFlow()
+
+
+    init {
+        viewModelScope.launch {
+            positionInTrackFlow.collect{
+                if(!isDragging) {
+                    _sliderPosition.emit(it)
+                }
+            }
+        }
+
+    }
+
+
+
+    var isDragging = false
+
+    fun onSliderValueChange(position: Float) {
+        isDragging = true
+        viewModelScope.launch {
+            _sliderPosition.emit(position.toLong())
+        }
+    }
+
+    fun onSliderValueChangeFinished() {
+        isDragging = false
+        seekTo(sliderPosition.value)
+    }
+
 
     fun playTrack(trackId: Long) {
         startPlayTrackUseCase(trackId)
@@ -29,14 +65,20 @@ class PlayerViewModel @Inject constructor(
 
     fun playPrevious() {
         controlPlaybackUseCase.playPrevious()
+        viewModelScope.launch {
+            _sliderPosition.emit(0L)
+        }
     }
 
     fun playNext() {
         controlPlaybackUseCase.playNext()
+        viewModelScope.launch {
+            _sliderPosition.emit(0L)
+        }
     }
 
-    fun seekTo(fraction: Float) {
-        controlPlaybackUseCase.seekTo(30*fraction)
+    fun seekTo(ms: Long) {
+        controlPlaybackUseCase.seekTo(ms)
     }
 
 }

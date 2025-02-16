@@ -25,7 +25,9 @@ class NavigationState(
     }
 
     fun navigateToPlayer(track: Track) {
-        navHostController.navigate(Route.Player(trackIdToPlay = track.id))
+        navHostController.navigate(Route.Player(trackIdToPlay = track.id)) {
+            launchSingleTop = true
+        }
     }
 
     fun navigateToPlayer() {

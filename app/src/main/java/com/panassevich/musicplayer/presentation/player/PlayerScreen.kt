@@ -1,8 +1,11 @@
 package com.panassevich.musicplayer.presentation.player
 
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.IndicationNodeFactory
-import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -19,11 +22,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalContentColor
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
@@ -32,20 +32,16 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -54,9 +50,8 @@ import com.panassevich.musicplayer.R
 import com.panassevich.musicplayer.domain.entity.PlaybackState
 import com.panassevich.musicplayer.getApplicationComponent
 import com.panassevich.musicplayer.navigation.Route
-import com.panassevich.musicplayer.presentation.ui.theme.MusicPlayerTheme
 import java.util.Locale
-import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
 fun PlayerScreen(
@@ -66,7 +61,8 @@ fun PlayerScreen(
 ) {
     val component = getApplicationComponent()
     val viewModel: PlayerViewModel = viewModel(factory = component.getViewModelFactory())
-    val state: State<PlaybackState> = viewModel.state.collectAsState(PlaybackState.NoTrack)
+    val state: State<PlaybackState> = viewModel.playbackState.collectAsState()
+    val sliderPosition = viewModel.sliderPosition.collectAsState()
 
     LaunchedEffect(true) {
         if (trackIdToPlay != Route.Player.NO_ID) {
@@ -78,7 +74,7 @@ fun PlayerScreen(
         modifier = Modifier
             .fillMaxSize()
             .padding(paddingValues)
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = 24.dp)
     ) {
         IconButton(
             modifier = Modifier.padding(top = 16.dp),
@@ -109,51 +105,71 @@ fun PlayerScreen(
                 }
             }
 
-            is PlaybackState.Current -> {
-                PlayerContent(playbackState, viewModel)
+            is PlaybackState.CurrentTrack -> {
+                PlayerContent(viewModel, playbackState, sliderPosition)
             }
         }
     }
 }
 
+
 @Composable
-fun PlayerContent(state: PlaybackState.Current, viewModel: PlayerViewModel) {
+fun PlayerContent(
+    viewModel: PlayerViewModel,
+    state: PlaybackState.CurrentTrack,
+    positionInTrackState: State<Long>,
+) {
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         TrackInfo(state)
-        Spacer(modifier = Modifier.height(32.dp))
-        var sliderPosition by remember { mutableFloatStateOf(0f) }
-        Slider(
-            value = sliderPosition,
-            onValueChange = { newValue -> sliderPosition = newValue  },
-            onValueChangeFinished = {
-                //call seek
-            },
-        )
-        Row(
-        ) {
-            Text(
-                text = formatDurationTime(state.secondsFromStart)
-            )
-            Spacer(Modifier.weight(1f))
-            Text(
-                text = formatDurationTime(state.track.durationSeconds)
-            )
-        }
-
+        Spacer(modifier = Modifier.weight(1f))
+        SliderSection(
+            positionInTrackState,
+            state.track.durationMs,
+            onValueChange = { viewModel.onSliderValueChange(it) },
+            onValueChangeFinished = { viewModel.onSliderValueChangeFinished() })
         Controls(
             state = state,
             onClickPrevious = { viewModel.playPrevious() },
             onClickNext = { viewModel.playNext() },
             onClickPlayPause = { if (state.isPlaying()) viewModel.pause() else viewModel.resume() }
         )
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
-private fun formatDurationTime(durationSeconds: Int) =
-    durationSeconds.seconds.toComponents { minutes, seconds, _ ->
+@Composable
+private fun SliderSection(
+    sliderPosition: State<Long>,
+    trackDurationMs: Long,
+    onValueChange: (Float) -> Unit,
+    onValueChangeFinished: () -> Unit
+) {
+    Slider(
+        value = sliderPosition.value.toFloat(),
+        onValueChange = { newValue ->
+            onValueChange(newValue)
+        },
+        onValueChangeFinished = {
+            onValueChangeFinished()
+        },
+        valueRange = 0f..trackDurationMs.toFloat()
+    )
+    Row {
+        Text(
+            text = formatDurationTime(sliderPosition.value)
+        )
+        Spacer(Modifier.weight(1f))
+        Text(
+            text = formatDurationTime(trackDurationMs)
+        )
+    }
+}
+
+private fun formatDurationTime(durationMs: Long) =
+    durationMs.milliseconds.toComponents { minutes, seconds, _ ->
         String.format(
             Locale.getDefault(),
             "%d:%02d",
@@ -163,17 +179,27 @@ private fun formatDurationTime(durationSeconds: Int) =
     }
 
 @Composable
-private fun TrackInfo(state: PlaybackState.Current) {
-    AsyncImage(
-        modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(1f)
-            .clip(RoundedCornerShape(10.dp)),
-        model = state.track.coverUrlHD,
-        placeholder = painterResource(R.drawable.cover_placeholder),
-        error = painterResource(R.drawable.cover_placeholder),
-        contentDescription = null
+private fun TrackInfo(state: PlaybackState.CurrentTrack) {
+    val animatedPadding by animateDpAsState(
+        if (state.isPlaying()) {
+            0.dp
+        } else {
+            20.dp
+        },
+        label = "padding"
     )
+        AsyncImage(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(animatedPadding)
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(10.dp)),
+            model = state.track.coverUrlHD,
+            placeholder = painterResource(R.drawable.cover_placeholder),
+            error = painterResource(R.drawable.cover_placeholder),
+            contentDescription = null
+        )
+
     Spacer(modifier = Modifier.height(16.dp))
     Text(
         text = state.track.name,
@@ -205,7 +231,7 @@ private fun TrackInfo(state: PlaybackState.Current) {
 
 @Composable
 private fun Controls(
-    state: PlaybackState.Current,
+    state: PlaybackState.CurrentTrack,
     onClickPrevious: () -> Unit,
     onClickPlayPause: () -> Unit,
     onClickNext: () -> Unit
@@ -213,7 +239,6 @@ private fun Controls(
     val switchButtonsSize = 50.dp
     val indication = ripple()
     Row(
-        modifier = Modifier.fillMaxSize(),
         horizontalArrangement = Arrangement.spacedBy(
             16.dp,
             alignment = Alignment.CenterHorizontally
@@ -275,19 +300,6 @@ private fun PlaybackControlButton(
 }
 
 private fun PlaybackState.isPlaying(): Boolean {
-    if (this !is PlaybackState.Current) return false
-    return currentState == PlaybackState.Current.CurrentState.PLAYING
-}
-
-@Composable
-@Preview
-private fun PlayerPreview() {
-    MusicPlayerTheme(darkTheme = false) {
-        PlayerScreen(
-            paddingValues = PaddingValues(0.dp),
-            trackIdToPlay = 0
-        ) {
-
-        }
-    }
+    if (this !is PlaybackState.CurrentTrack) return false
+    return currentState == PlaybackState.CurrentState.PLAYING
 }

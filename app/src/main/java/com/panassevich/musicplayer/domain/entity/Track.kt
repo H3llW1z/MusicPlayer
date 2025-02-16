@@ -5,7 +5,7 @@ data class Track(
     val name: String,
     val albumName: String?,
     val artistName: String,
-    val durationSeconds: Int,
+    val durationMs: Long,
     val coverUrlHD: String?,   //high quality cover
     val coverUrlRegular: String?,   //regular quality cover
     val previewUrl: String

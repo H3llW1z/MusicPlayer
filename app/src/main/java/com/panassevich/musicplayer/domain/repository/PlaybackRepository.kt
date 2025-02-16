@@ -9,13 +9,15 @@ interface PlaybackRepository {
 
     fun getCurrentState(): StateFlow<PlaybackState>
 
+    fun getCurrentPositionInTrack(): StateFlow<Long> //moved separately of PlaybackState because this value is updated very quickly
+
     fun startPlay(trackId: Long)
 
     fun resume()
 
     fun pause()
 
-    fun seekTo(fraction: Float)
+    fun seekTo(ms: Long)
 
     fun playPrevious()
 

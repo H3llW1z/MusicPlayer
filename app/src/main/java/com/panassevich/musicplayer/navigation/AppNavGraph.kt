@@ -32,7 +32,7 @@ fun AppNavGraph(
                     animationSpec = tween(300),
                     initialOffset = { size -> IntOffset(0, size.height) }
                 )
-            },
+            }
         ){
             val player: Route.Player = it.toRoute()
             playerContent(player.trackIdToPlay)

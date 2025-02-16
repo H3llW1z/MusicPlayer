@@ -5,5 +5,6 @@ import javax.inject.Inject
 
 class GetPlaybackStateUseCase @Inject constructor(private val repository: PlaybackRepository) {
 
-    operator fun invoke() = repository.getCurrentState()
+    fun getCurrentState() = repository.getCurrentState()
+    fun getCurrentPositionInTrack() = repository.getCurrentPositionInTrack()
 }
