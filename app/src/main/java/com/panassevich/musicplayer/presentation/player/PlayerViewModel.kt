@@ -11,22 +11,21 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 class PlayerViewModel @Inject constructor(
-    private val getPlaybackStateUseCase: GetPlaybackStateUseCase,
+    getPlaybackStateUseCase: GetPlaybackStateUseCase,
     private val controlPlaybackUseCase: ControlPlaybackUseCase,
     private val startPlayTrackUseCase: StartPlayTrackUseCase
 ) : ViewModel() {
 
     val playbackState = getPlaybackStateUseCase.getCurrentState()
 
-    val positionInTrackFlow = getPlaybackStateUseCase.getCurrentPositionInTrack()
+    private val positionInTrackFlow = getPlaybackStateUseCase.getCurrentPositionInTrack()
     private val _sliderPosition = MutableStateFlow(0L)
     val sliderPosition = _sliderPosition.asStateFlow()
 
-
     init {
         viewModelScope.launch {
-            positionInTrackFlow.collect{
-                if(!isDragging) {
+            positionInTrackFlow.collect {
+                if (!isDragging) {
                     _sliderPosition.emit(it)
                 }
             }
@@ -34,9 +33,8 @@ class PlayerViewModel @Inject constructor(
 
     }
 
-
-
-    var isDragging = false
+    //when user is dragging slider updated by drag not by track played time
+    private var isDragging = false
 
     fun onSliderValueChange(position: Float) {
         isDragging = true
@@ -49,7 +47,6 @@ class PlayerViewModel @Inject constructor(
         isDragging = false
         seekTo(sliderPosition.value)
     }
-
 
     fun playTrack(trackId: Long) {
         startPlayTrackUseCase(trackId)
@@ -77,7 +74,7 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    fun seekTo(ms: Long) {
+    private fun seekTo(ms: Long) {
         controlPlaybackUseCase.seekTo(ms)
     }
 

@@ -1,7 +1,5 @@
 package com.panassevich.musicplayer.di
 
-import android.content.Context
-import androidx.media3.exoplayer.ExoPlayer
 import com.panassevich.musicplayer.data.datastore.LocalTracksDataStoreImpl
 import com.panassevich.musicplayer.data.datastore.OnlineTracksDataStoreImpl
 import com.panassevich.musicplayer.data.network.api.ApiFactory
@@ -30,8 +28,5 @@ interface DataModule {
 
         @[ApplicationScope Provides]
         fun provideApiService(): ApiService = ApiFactory.apiService
-
-//        @[ApplicationScope Provides]
-//        fun provideExoplayer(context: Context): ExoPlayer = ExoPlayer.Builder(context).build()
     }
 }

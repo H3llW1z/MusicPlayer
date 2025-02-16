@@ -1,4 +1,4 @@
-package com.panassevich.musicplayer.presentation
+package com.panassevich.musicplayer.presentation.service
 
 import android.content.Context
 import android.content.Intent

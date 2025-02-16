@@ -23,9 +23,11 @@ interface PlaybackRepository {
 
     fun playNext()
 
-    suspend fun getAllLocalTracks(): List<Track>
+    fun getLocalTracks(): StateFlow<List<Track>>
 
-    suspend fun searchLocalTracks(query: String): List<Track>
+    suspend fun loadAllLocalTracks()
+
+    suspend fun searchLocalTracks(query: String)
 
     fun getOnlineTracks(): StateFlow<OnlineTracksResult>
 

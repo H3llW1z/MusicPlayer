@@ -1,5 +1,6 @@
 package com.panassevich.musicplayer.presentation.player
 
+import android.os.Build
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateContentSize
@@ -37,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -50,6 +52,7 @@ import com.panassevich.musicplayer.R
 import com.panassevich.musicplayer.domain.entity.PlaybackState
 import com.panassevich.musicplayer.getApplicationComponent
 import com.panassevich.musicplayer.navigation.Route
+import com.panassevich.musicplayer.presentation.service.PlaybackService
 import java.util.Locale
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -64,8 +67,18 @@ fun PlayerScreen(
     val state: State<PlaybackState> = viewModel.playbackState.collectAsState()
     val sliderPosition = viewModel.sliderPosition.collectAsState()
 
+    val context = LocalContext.current
     LaunchedEffect(true) {
         if (trackIdToPlay != Route.Player.NO_ID) {
+
+            val intent = PlaybackService.getIntent(context)
+
+            if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.O) {
+                context.startService(intent)
+            } else {
+                context.startForegroundService(intent)
+            }
+
             viewModel.playTrack(trackIdToPlay)
         }
     }
