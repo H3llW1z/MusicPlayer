@@ -47,6 +47,8 @@ dagger-compiler = { group = "com.google.dagger", name = "dagger-compiler", versi
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 
 serialization = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotinx-serialization" }
+androidx-media3-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "media3Exoplayer" }
+androidx-media3-session = { group = "androidx.media3", name = "media3-session", version.ref = "media3Exoplayer" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

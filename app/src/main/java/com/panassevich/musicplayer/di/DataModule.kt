@@ -31,7 +31,7 @@ interface DataModule {
         @[ApplicationScope Provides]
         fun provideApiService(): ApiService = ApiFactory.apiService
 
-        @[ApplicationScope Provides]
-        fun provideExoplayer(context: Context): ExoPlayer = ExoPlayer.Builder(context).build()
+//        @[ApplicationScope Provides]
+//        fun provideExoplayer(context: Context): ExoPlayer = ExoPlayer.Builder(context).build()
     }
 }

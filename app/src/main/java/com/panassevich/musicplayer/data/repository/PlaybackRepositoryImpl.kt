@@ -1,11 +1,20 @@
 package com.panassevich.musicplayer.data.repository
 
+import android.content.ComponentName
+import android.content.Context
+import android.net.Uri
+import android.os.Build
 import android.util.Log
+import androidx.annotation.OptIn
+import androidx.core.content.ContextCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
 import com.panassevich.musicplayer.data.network.api.ApiService
 import com.panassevich.musicplayer.domain.datastore.LocalTracksDataStore
 import com.panassevich.musicplayer.domain.datastore.OnlineTracksDataStore
@@ -14,6 +23,7 @@ import com.panassevich.musicplayer.domain.entity.OnlineTracksType
 import com.panassevich.musicplayer.domain.entity.PlaybackState
 import com.panassevich.musicplayer.domain.entity.Track
 import com.panassevich.musicplayer.domain.repository.PlaybackRepository
+import com.panassevich.musicplayer.presentation.PlaybackService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -35,10 +45,19 @@ import javax.inject.Inject
 import kotlin.time.Duration.Companion.seconds
 
 class PlaybackRepositoryImpl @Inject constructor(
-    private val player: ExoPlayer,
+    context: Context,
     private val localTracksDataStore: LocalTracksDataStore,
     private val onlineTracksDataStore: OnlineTracksDataStore
 ) : PlaybackRepository {
+
+    val intent = PlaybackService.getIntent(context)
+
+    private val sessionToken = SessionToken(context, ComponentName(context, PlaybackService::class.java))
+
+    private val controllerFuture =
+        MediaController.Builder(context, sessionToken).buildAsync()
+
+    lateinit var player: MediaController //TODO()
 
     private val coroutineScope = CoroutineScope(Dispatchers.Default)
     private val coroutineScopeMain = CoroutineScope(Dispatchers.Main)
@@ -50,12 +69,28 @@ class PlaybackRepositoryImpl @Inject constructor(
         get() = _onlineTracks.toList()
 
     init {
-        player.addListener(object : Player.Listener {
+
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.O) { //TODO()
+            context.startService(intent)
+        } else {
+            context.startForegroundService(intent)
+        }
+
+        controllerFuture.addListener({
+            player = controllerFuture.get()
+
+            player.addListener(getPlayerListener())
+
+        }, ContextCompat.getMainExecutor(context))
+    }
+
+    private fun getPlayerListener(): Player.Listener = object : Player.Listener {
 
             var job: Job? = null
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 if (isPlaying) {
+                    Log.d("onIsPlayingChanged", "called: $isPlaying")
                     job?.cancel()
                     job = coroutineScopeMain.launch {
                         while (isActive) {  //end cycle if coroutine is not active anymore
@@ -89,8 +124,7 @@ class PlaybackRepositoryImpl @Inject constructor(
                 }
             }
 
-        })
-    }
+        }
 
     private var currentLoadState: CurrentLoadState = CurrentLoadState(OnlineTracksType.CHART, 0)
 
@@ -181,6 +215,7 @@ class PlaybackRepositoryImpl @Inject constructor(
 
         updatePlaybackStateEvents.collect {
             val track: Track? = getCurrentTrack()
+            Log.d("updatePlaybackStateEvents", player.currentMediaItem?.localConfiguration?.tag.toString())
             val state = if (track == null) {
                 PlaybackState.NoTrack
             } else {
@@ -278,11 +313,24 @@ class PlaybackRepositoryImpl @Inject constructor(
     private fun getOnlineTracksResult(hasMoreTracks: Boolean = true, hasError: Boolean = false) =
         OnlineTracksResult(currentLoadState.tracksType, onlineTracks, hasMoreTracks, hasError)
 
-    private fun getCurrentTrack(): Track? =
-        player.currentMediaItem?.localConfiguration?.tag as? Track
+//    private fun getCurrentTrack(): Track? =
+//        player.currentMediaItem?.localConfiguration?.tag as? Track
+
+    private fun getCurrentTrack(): Track? {
+        val mediaId = player.currentMediaItem?.mediaId?.toLong()
+        return _onlineTracks.find { it.id == mediaId }
+    }
 
     private fun List<Track>.toMediaItems() = map { track ->
         MediaItem.Builder().setUri(track.previewUrl).setMediaId(track.id.toString()).setTag(track)
+            .setMediaMetadata(
+                MediaMetadata.Builder()
+                    .setArtist(track.artistName)
+                    .setTitle(track.name)
+                    .setAlbumTitle(track.albumName)
+                    .setArtworkUri(Uri.parse(track.coverUrlHD))
+                    .build()
+            )
             .build()
     }
 

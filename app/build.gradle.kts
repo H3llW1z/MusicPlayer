@@ -53,12 +53,15 @@ dependencies {
     implementation(libs.androidx.material3)
 
     implementation(libs.dagger.core)
+
     ksp(libs.dagger.compiler)
 
     implementation(libs.retrifit.core)
     implementation(libs.retrifit.gsonConverter)
 
     implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.ui)
+    implementation(libs.androidx.media3.session)
 
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)

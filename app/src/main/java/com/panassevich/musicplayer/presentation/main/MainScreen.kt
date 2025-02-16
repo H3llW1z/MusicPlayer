@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -103,7 +104,10 @@ fun MainScreen() {
             },
             playerContent = { trackIdToPlay ->
                 PlayerScreen(paddingValues, trackIdToPlay, onClickBack = {
-                    navigationState.pop()
+                    //this check prevents blank screen when fast double clicking back button on player
+                    if (navigationState.navHostController.currentBackStackEntry?.lifecycle?.currentState == Lifecycle.State.RESUMED) {
+                        navigationState.pop()
+                    }
                 })
             }
         )
